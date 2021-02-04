@@ -1,0 +1,222 @@
+---
+title: "348 Final Project"
+author: "Shay Lebovitz"
+date: "11/19/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo = F, message = F, warning = F}
+library(Ecdat)
+library(MASS)
+library(tidyverse)
+library(klaR)
+```
+
+For my project, I will be analyzing unemployment duration data from the R package `Ecdat`. It contains 3343 observations of 11 variables. These 11 variables are:
+1. `spell`: length of unemployment spell in number of two-week intervals. <br>
+2. `censor1`: dummy variable equal to 1 if re-employed at a full-time job. <br>
+3. `censor2`: dummy variable equal to 1 if re-employed at a part-time job. <br>
+4. `censor3`: dummy variable equal to 1 if re-employed but left job, part/full-time status unknown. <br>
+5. `censor4`: dummy variable equal to 1 if still jobless. <br>
+6. `age`: age of person. <br>
+7. `ui`: dummy variable equal to one if person filed unemployment insurance claim. <br>
+8. `reprate`: eligible replacement rate. <br>
+9. `disrate`: eligible disregard rate. <br>
+10. `logwage`: log weekly earnings in lost job (1985\$). <br>
+11. `tenure`: years tenure in lost job. <br>
+
+The goal is to determine if linear discriminant analysis can adequately separate the four censor groups based on information in the `spell`, `age`, `reprate`, `disrate`, `logwage`, and `tenure` variables. This will be more complicated than the examples given in class, which only dealt with 2 distinct groups. If the analysis doesn't work, I may combine the three re-emloyment variables into one, simply called `re-employed`, and compare that to `censor4`, which I'd call `unemployed`. Since I am not sure how dummy variables will work in LDA, I will leave `ui` out of the analysis.
+
+```{r}
+head(UnempDur)
+```
+<br>
+For the sake of graphics and run-time, I will reduce the number of observations to 100, sampled randomly from the data set. Furthermore, it should be noted that a 1 refers to `censor1` (re-employed full-time), a 2 refers to `censor2` (re-employed part-time), a 3 refers to `censor3` (re-employed but left job), and a 0 refers to `censor4` (still jobless).
+```{r, echo = FALSE}
+unemp <- tibble(UnempDur)
+unemp <- unemp %>% 
+  mutate(status = censor1 + 2*censor2 + 3*censor3 + 0*censor4)
+set.seed(12345)
+unemp <- sample_n(unemp, 100)
+unemp_lda <- lda(status ~ spell + age + reprate + disrate + logwage + tenure, data = unemp)
+unemp_lda_cv <- lda(status ~ spell + age + reprate + disrate + logwage + tenure, 
+                    data = unemp, CV = T)
+```
+```{r}
+unemp_lda
+plot(unemp_lda)
+```
+<br><br>\
+Due to the issue of the number of groups being larger than 2, there are multiple linear discriminant functions. But we are clearly able to see that there is no clear distinction between the groups.
+```{r, echo = FALSE}
+unemp_pred <- predict(unemp_lda)
+```
+<br>
+To see numerically how many of each class the classification prediction got right, we can refer to this table:
+```{r}
+table(unemp$status, unemp_pred$class, dnn = c("actual", "predicted"))
+```
+We see that the functions do a decent job of discriminating group 0 (jobless), with a success rate of 21/34 = 62%. Most that were predicted wrong were predicted as group 1, which is strange because group 1 (full-time re-employment) is the least similar to group 0. The function does a better job identifying group 1, with a 27/34 = 79% success rate. Most group 1's were incorrectly identified as group 0, which is strange as explained above. However, the function does a very poor job classifying groups 2 (part-time re-employment) and group 3 (re-employed but left job), with a 0/11 = 0% and 2/21 = 10% success rate. Both of these groups were mostly wrongly predicted as belonging to group 1. Based on this analysis, I don't think linear discriminant analysis is a useful technique for this data set.
+<br>
+The confusion matrix shown above has drawbacks, however. It uses the data for subject *j* to estimate the coefficients for the confusion matrix. By using cross-validation, we can eliminate this problem and thus provide a better estimate of "out of sample" performance.
+```{r}
+table(unemp$status, unemp_lda_cv$class, dnn = c('actual', 'predicted'))
+```
+<br>
+We see that the accuracy only went down using the cross-validaiton method. The success rate of group 0 dropped to 17/34 = 50% and group 1 dropped to 25/34 = 73.5%. Group 2 stayed at a 0% success rate and group 3 dropped to 0% as well.  
+
+*From now on, all analyses will be performed with the cross-validation method.*  
+<br>
+
+Now, I want to now try a simpler problem and see if LDA is still of any use. I will combine groups 1, 2, and 3 into a `re-employed` variable (now group 1) and run the analysis against group 0, the `unemployed` variable. 
+```{r, echo = FALSE}
+unemp2 <- unemp %>% 
+  mutate(status2 = censor1 + censor2 + censor3)
+unemp2_lda <- lda(status2 ~ spell + age + reprate + disrate + logwage + tenure, data = unemp2)
+unemp2_lda_cv <- lda(status2 ~ spell + age + reprate + disrate + logwage + tenure,
+                     data = unemp2, CV = T)
+```
+```{r, fig.height = 8}
+unemp2_lda
+plot(unemp2_lda)
+```
+<br>
+<br>
+\  
+While group 1 is almost entirely concentrated above -1, group 0 is much more spread out. However, the clear distinction between the two groups simply isn't there, so again LDA is not a very appropriate method. I will still analyze the table results, using the cross-validation method described above:
+```{r, echo = FALSE}
+unemp2_pred <- predict(unemp2_lda)
+```
+```{r}
+table(unemp2$status2, unemp2_lda_cv$class, dnn = c('actual', 'predicted'))
+```
+The top confusion matrix The method does a poor job of classifying group 0 (jobless) with a 13/34 = 38.2% success rate. However, it does a fairly good job of classifying group 1 (re-employed) with a 59/66 = 89.4% success rate. Overall, it still looks as though LDA is not appropriate in this case in determining the re-employment status of temporarily unemployed people using unemployment duration, replacement rate, disregard rate, wage, or tenure at previous job. I will attempt one more LDA, this time with the groups being whether or not the person filed for unemployment insurance. 
+
+
+```{r, echo = FALSE}
+unemp <- unemp %>% 
+  mutate(ui = ifelse(ui == 'yes', 1, 0))
+unemp_lda_ui <- lda(ui ~ spell + age + reprate + disrate + logwage + tenure, data = unemp)
+unemp_lda_ui_cv <- lda(ui ~ spell + age + reprate + disrate + logwage + tenure,
+                       data = unemp, CV = T)
+```
+```{r, fig.height = 8}
+unemp_lda_ui
+plot(unemp_lda_ui)
+```
+<br>
+<br>
+\  
+
+We see that there is clear differentiation at the fringes, with group 0 (no unemployment insurance claim) containing most of the values less than -1, and group 1 (unemployment insurance claim) containing most of the values greather than 1. However, there is clearly lots of overlap in between -1 and 1. Again, this shows that the method is not very accurate. We can look at the table (using cross-validation) to numerically determine the accuracy of the analysis:
+```{r, echo = FALSE}
+unemp_ui_pred <- predict(unemp_lda_ui)
+```
+```{r}
+table(unemp$ui, unemp_lda_ui_cv$class, dnn = c('actual', 'predicted'))
+```
+Here, we see that it correctly predicted group 0 22/43 = 51.2% of the time, and predicted group 1 38/57 = 66.7% of the time. Again, these numbers are simply not high enough for LDA to be deemed an appropriate method of classifying re-employment or unemployment insurance filing status based on this data set.  
+<br>
+
+Quadratic discriminant analysis (QDA) could be used instead of linear discriminant analysis. This method allows for more flexibility and could perhaps lead to better classification results. Unlike LDA, QDA does not require the assumption that the within-group covariance matrices of **X** are equal. 
+```{r, echo = FALSE}
+unemp2_0 <- unemp2 %>% 
+  filter(status2 == 0) %>% 
+  select(spell, age, reprate, disrate, logwage, tenure)
+unemp2_1 <- unemp2 %>% 
+  filter(status2 == 1) %>% 
+  select(spell, age, reprate, disrate, logwage, tenure)
+```
+```{r}
+cov(unemp2_0)
+cov(unemp2_1)
+```
+<br>
+The matrices above show the covariance matrices of two groups: group 0 (still unemployed) and group 1 (re-employed). We see thay many of the values are relatively close, but some differ by an order of magnitude or more. Likewise, some values are positive in one group and negative in another. This suggests that the assumption of LDA that the covariance matrices of the two groups are equal may not hold very well. Thus, a quadratic discriminant analysis will be performed on this data set, to see if it produces any better results than LDA did.
+```{r, echo = FALSE}
+unemp2_qda <- qda(status2 ~ spell + age + reprate + disrate + logwage + tenure, data = unemp2)
+unemp2_qda_cv <- qda(status2 ~ spell + age + reprate + disrate + logwage + tenure,
+                     data = unemp2, CV = T)
+unemp2_qda_pred <- predict(unemp2_qda)
+```
+```{r}
+unemp2_qda
+partimat(as.factor(status2) ~ spell + age + reprate + disrate + logwage + tenure, 
+         data = unemp2, method = 'qda')
+table(unemp2$status2, unemp2_qda_cv$class, dnn = c('actual', 'predicted'))
+```
+<br>
+We see that there is no clear distinctions between the 1's and 0's in any of the graphs, and thus even a quadratic function cannot distinguish them very well. For each combination of variables, we see error rates in the range of 0.25 - 0.40, most hovering around 0.35. The table shows us that the method accurately classified group 0 (still unemployed) 14/34 = 41.2% of the time, and group 1 (re-employed) 55/66 = 83.3% of the time. This is a slightly better success rate for group 0 and a slightly worse success rate for group 1 than linear discriminant analysis. So, QDA does not seem any more appropriate than LDA for this classification problem. One might conclude from this analysis that tenure, unemployment spell, age, wage, replacement rate and disregard rate are not great predictors of the eventual re-employment status of workers.
+
+
+<br>
+Other multivariate analysis techniques could still be used to gain information from this data set, most notably Prinipal Components Analysis or Factor Analysis. These would allow the analyst to determine which combinations of variables or underlying factors are the most associated with variability in the re-employment status. However, no further analysis will be done on this project.
+
+
+\newpage
+
+#R Output
+```{r}
+#First LDA analysis - four groups
+set.seed(12345)
+unemp<- tibble(UnempDur)
+unemp <- unemp %>% 
+  mutate(status = censor1 + 2*censor2 + 3*censor3 + 0*censor4)
+unemp <- sample_n(unemp, 100)
+unemp_lda <- lda(status ~ spell + age + reprate + disrate + logwage + tenure, data = unemp)
+unemp_lda_cv <- lda(status ~ spell + age + reprate + disrate + logwage + tenure,
+                    data = unemp, CV = T)
+unemp_lda
+unemp_lda_cv
+unemp_pred <- predict(unemp_lda)
+table(unemp$status, unemp_lda_cv$class, dnn = c("actual", "predicted"))
+table(unemp$status, unemp_pred$class, dnn = c("actual", "predicted"))
+
+#Second LDA analysis - two groups
+unemp2 <- unemp %>% 
+  mutate(status2 = censor1 + censor2 + censor3)
+unemp2_lda <- lda(status2 ~ spell + age + reprate + disrate + logwage + tenure, data = unemp2)
+unemp2_lda_cv <- lda(status2 ~ spell + age + reprate + disrate + logwage + tenure,
+                     data = unemp2, CV = T)
+unemp2_lda
+unemp2_lda_cv
+unemp2_pred <- predict(unemp2_lda)
+table(unemp2$status2, unemp2_pred$class, dnn = c('actual', 'predicted'))
+table(unemp2$status2, unemp2_lda_cv$class, dnn = c('actual', 'predicted'))
+
+#Third LDA analysis - unemployment insurance
+unemp <- unemp %>% 
+  mutate(ui = ifelse(ui == 'yes', 1, 0))
+unemp_lda_ui <- lda(ui ~ spell + age + reprate + disrate + logwage + tenure, data = unemp)
+unemp_lda_ui_cv <- lda(ui ~ spell + age + reprate + disrate + logwage + tenure,
+                       data = unemp, CV = T)
+unemp_lda_ui
+unemp_lda_ui_cv
+unemp_ui_pred <- predict(unemp_lda_ui)
+table(unemp$ui, unemp_ui_pred$class, dnn = c('actual', 'predicted'))
+table(unemp$ui, unemp_lda_ui_cv$class, dnn = c('actual', 'predicted'))
+
+#QDA analysis
+unemp2_0 <- unemp2 %>% 
+  filter(status2 == 0) %>% 
+  select(spell, age, reprate, disrate, logwage, tenure)
+unemp2_1 <- unemp2 %>% 
+  filter(status2 == 1) %>% 
+  select(spell, age, reprate, disrate, logwage, tenure)
+cov(unemp2_0)
+cov(unemp2_1)
+unemp2_qda <- qda(status2 ~ spell + age + reprate + disrate + logwage + tenure, data = unemp2)
+unemp2_qda_cv <- qda(status2 ~ spell + age + reprate + disrate + logwage + tenure,
+                     data = unemp2, CV = T)
+unemp2_qda
+unemp2_qda_cv
+unemp2_qda_pred <- predict(unemp2_qda)
+table(unemp2$status2, unemp2_qda_cv$class, dnn = c('actual', 'predicted'))
+table(unemp2$status2, unemp2_qda_pred$class, dnn = c('actual', 'predicted'))
+```
+
+

@@ -1,0 +1,188 @@
+---
+title: "Shay Lebovitz"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+**4)**
+<br>
+*a)*
+```{r}
+library(GPArotation)
+
+data <- read.table('/Users/shaylebovitz/R/employment.txt', header = TRUE)
+employment <- data[,1:7]
+
+(employment_fa2 <- factanal(employment, 2))
+```
+<br>
+*b)*
+```{r}
+emp_loadings <- matrix(c(-0.738, 0.344, 0.060, 0.099, -0.268, 0.672, 0.869,
+                       -0.671, -0.005, 0.451, 0.791, 0.556, 0.468, -0.230), 
+                       nrow = 7, ncol = 2)
+t_emp_loadings <- matrix(c(-0.738, -0.671, 0.344, -0.005, 0.060, 0.451, 0.099,
+                           0.791, -0.268, 0.556, 0.672, 0.468, 0.869, -0.230), 
+                        nrow = 2, ncol = 7)
+(employment_fa2_cor <- emp_loadings %*% t_emp_loadings +
+  + diag(employment_fa2$unique))
+cor(employment)
+```
+Overall these two correlation matrices are very similar, It appears as though pretty much every element is within 20% of each other. Thus, the factor analysis model appears to capture the observed correlations between the variables.
+
+<br>
+*c)*
+```{r}
+print (employment_fa2$loadings, cutoff = 0.4)
+print(factanal(employment, 2, rotation = "quartimax")$loadings, cutoff = 0.4)
+print(factanal(employment, 2, rotation = "infomaxT")$loadings, cutoff=  0.4)
+```
+All these rotations have two rows with a non-zero loading in each column, which is not ideal. 'quartimax' and 'infomaxT' have essentially identical loading matrices. I believe the original ('varimax') loading matrix is the best, as it has 4 rows with a non-zero loading in just one column, whereas the other two have only 3 with that property. 
+
+<br>
+*d)*
+```{r}
+(employment_fa3 <- factanal(employment, 3))
+emp_loadings3 <- matrix(c(-0.902, 0.220, 0.024, 0.381, 0.216, 0.859, 0.577,
+                          0.062, -0.356, -0.089, 0.306, 0.847, -0.004, -0.588, 
+                          -0.422, 0.070, 0.760, 0.662, 0.078, 0.087, -0.165), 
+                        nrow = 7, ncol = 3)
+t_emp_loadings3 <- matrix(c(-0.902, 0.062, -0.422, -0.220, -0.356, 0.070,
+                            0.024, -0.089, 0.760, 0.381, 0.306, 0.662,
+                            0.216, 0.847, 0.078, 0.859, -0.004, 0.087,
+                            0.577, -0.588, -0.165), nrow = 3, ncol = 7)
+(employment_fa3_cor <- emp_loadings3 %*% t_emp_loadings3 +
+    + diag(employment_fa3$unique))
+cor(employment)
+```
+Again, we see that these two correlation matrices are extremely similar.
+
+```{r}
+print (employment_fa3$loadings, cutoff = 0.4)
+print(factanal(employment, 3, rotation = "quartimax")$loadings, cutoff = 0.4)
+print(factanal(employment, 3, rotation = "infomaxT")$loadings, cutoff=  0.4)
+```
+Here, we see that all three rotations yield loadings with 4 rows with just one non-zero loading. Similarly, all three rotations contain at least m = 3 zeros in each column, and all three have two rows with two non-zero factors. From this perspective, I don't think that one rotation is clearly better than the others, they all seem very even.
+
+<br>
+*e)*
+```{r}
+employment_fa1 <- factanal(employment, 1)
+(phi <- 1 - c(sum(employment_fa1$unique), sum(employment_fa2$unique),
+              sum(employment_fa3$unique))/7)
+```          
+Based on these results, I would chose a model with three factors and use the 'varimax' rotation. Choosing m = 2 yields a Phi value of 0.55, which is too small. Even having m = 3 (Phi = 0.67) is a little small. As discussed earlier, there doesn't seemt to be much of a difference between the loading rotations for a three factor model. 
+For a three factor model with the 'varimax' rotation, we see that Factor 1 greatly predicts AGR, and SPS, as well as TC to a lesser extent. Factor 2 greatly predicts FIN, and TC again to a lesser extent. Factor 3 has a small predictive effect on AGR, and decent effect on SER and FIN. No factor significantly predicts MAN. Off the top of my head, I cannot think of a realistic representation of these factors, as it is unclear what agriculture, social services, and transport/communications would have in common, or what factor would determine finance and transport but is uncorrelated with Factor 1. 
+
+<br><br>
+
+**5)**
+<br>
+*a)*
+```{r}
+apps <- read.table('/Users/shaylebovitz/R/applicants.txt', header = TRUE)
+#m <= 3
+apps_fa1 <- factanal(apps, 1)
+apps_fa2 <- factanal(apps, 2)
+apps_fa3 <- factanal(apps, 3)
+(phi <- 1 - c(sum(apps_fa1$unique), sum(apps_fa2$unique), sum(apps_fa3$unique))/7)
+phi[-1] - phi[-3]
+apps_fa1$PVAL
+apps_fa2$PVAL
+apps_fa3$PVAL
+```
+Based on this analysis, I would say 2 factors is appropriate for this model, as they explain 78% of the variance, and it is also the last statistially significant P-value.
+
+<br>
+*b)*
+```{r}
+print(apps_fa2$loadings, cutoff = 0.4)
+apps_fa2$uniquenesses
+1-apps_fa2$uniquenesses
+```
+For a two factor model, we see that `Ent` has an extremely high communality, which suggests that its variance is highly explained by the factors. Most others have a relatively high communality, with `Con`, `Luc`, `Sal`, `Dri`, and `Amb` all having communalities > 0.74. `Lik` has a lower communality of 0.49, suggesting the factor model isn't as applicable to it.
+
+<br>
+*c)*
+```{r}
+print (apps_fa2$loadings, cutoff = 0.4)
+print(factanal(apps, 2, rotation = "quartimax")$loadings, cutoff = 0.4)
+print(factanal(apps, 2, rotation = "infomaxT")$loadings, cutoff=  0.4)
+```
+Here, we see that 'quartimax' and 'infomaxT' are essentially identical in terms of their loading matrices. They both have one non-zero loading element for every row except `Ent`. The 'varimax' rotation is similar: it has one non-zero loading element for every row except `Dri`. I believe the original 'varimax' rotation is the best because it is the only one with both columns containing at least 2 zeros.
+
+<br>
+*d)*
+```{r}
+print(factanal(apps, 2, rotation = "oblimin")$loadings, cutoff = 0.4)
+print(factanal(apps, 2, rotation = "promax")$loadings, cutoff=  0.4)
+print(factanal(apps, 2, rotation = "infomaxQ")$loadings, cutoff = 0.4)
+```
+All three of these rotated loading matrices are essentially the same. Factor 1 has non-zero loadings in `Con`, `Luc`, `Sal`, `Dri`, and `Amb`, whereas Factor 2 has non-zero loadings in `Lik` and `Ent`. All of the loading elements are of similar magnitude as well. Thus there is no clear optimal choice. 
+
+<br>
+*e) *
+It looks like the oblique rotations give a better loading matrix than the orthogonal rotations. I will randomly choose 'oblimin', as all the oblique rotations are essentialy the same. 
+```{r}
+factor1 <- factanal(apps, 2, rotation = "oblimin")$loadings[,1]
+factor2 <- factanal(apps, 2, rotation = "oblimin")$loadings[,2]
+cor(factor1, factor2)
+```
+Factor 1 relates to self-confidence, lucidity, salesmanship, drive, and ambition, whereas Factor 2 relates to likeability and enthusiasm. Because it is an oblique rotation, Factor 2 is not necessarily uncorrelated with Factor 1. We see that Factor 1 and Factor 2 are highly negatively correlated, with a correlation of -0.97. Thus, whatever underlying factor increases confidence, lucidity, salesmanship, drive, and ambition yields decreases in likeability and enthusiasm. 
+
+<br>
+**6)**
+<br>
+*a)*
+```{r}
+anx <- read.csv('/Users/shaylebovitz/R/anxiety.csv', header = TRUE)
+anx <- as.matrix(anx[,-1])
+(anx_fa2 <- factanal(factors = 2, covmat = list(cov = anx, n.obs = 335)))
+print(anx_fa2$loadings, cutoff = 0.4)
+```
+Only 4 out of the 20 rows of the loading matrix have a non-zero entry in each column, and thus the vast majority only have one non-zero loading. So it's off to a good start.
+
+```{r}
+anx_fa1 <- factanal(factors = 1, covmat = list(cov = anx, n.obs = 335))
+anx_fa3 <- factanal(factors = 3, covmat = list(cov = anx, n.obs = 335))
+(phi <- 1 - c(sum(anx_fa1$unique), sum(anx_fa2$unique), sum(anx_fa3$unique))/20)
+```
+Here, we see that two factors only explain roughly 45% of the correlation matrix, which is not adequate. This is enough information to declare that 2 factors is not appropriate for this model.
+
+<br>
+*b)*
+```{r}
+anx_fa2_quart <- factanal(factors = 2, 
+                          covmat = list(cov = anx, n.obs = 335),
+                          rotation = "quartimax")
+anx_fa2_infoT <- factanal(factors = 2, 
+                          covmat = list(cov = anx, n.obs = 335),
+                          rotation = "infomaxT")
+anx_fa2_obl <- factanal(factors = 2, 
+                          covmat = list(cov = anx, n.obs = 335),
+                          rotation = "oblimin")
+anx_fa2_pro <- factanal(factors = 2, 
+                          covmat = list(cov = anx, n.obs = 335),
+                          rotation = "promax")
+anx_fa2_infoQ <- factanal(factors = 2, 
+                          covmat = list(cov = anx, n.obs = 335),
+                          rotation = "infomaxQ")
+print(anx_fa2$loadings, cutoff = 0.4) # overlap, 0 empty
+print(anx_fa2_quart$loadings, cutoff = 0.4) # 2 overlap, 0 empty
+print(anx_fa2_infoT$loadings, cutoff = 0.4) # 3 overlap, 1 empty
+print(anx_fa2_obl$loadings, cutoff = 0.4) # no overlap, 1 empty
+print(anx_fa2_pro$loadings, cutoff = 0.4) # no overlap, 1 empty
+print(anx_fa2_infoQ$loadings, cutoff = 0.4) # 1 overlap, no empty
+```
+Based on the amount of overlap (non-zero element in both Factors) and empty (both factors have zero loading), I would choose either 'oblimin' or 'promax'. I'll go with 'oblimin'. 
+
+<br>
+*c)*
+```{r}
+print(anx_fa2_obl$loadings, cutoff = 0.4)
+```
+Firstly, it is important to note that because 'oblimin' is an oblique rotation, the factors are likely correlated. Factor 1 is a decent measure or x1, x2, x4, x8, x9, x10, x11, x12, x13, x15, x18, x19, and x20, while Factor 2 is a measure of x3, x5, x7, x14, and x17. Neither factor explains x6 well. Since all the variables seem very related (all related to anxiety during test-taking), I cannot think of what these underlying factors might be.
+
+
+

@@ -1,0 +1,88 @@
+---
+title: "348HWw6"
+author: "Shay Lebovitz"
+date: "10/18/2020"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**1)**
+*a)*
+```{r}
+flour_data <- read.table('/Users/shaylebovitz/R/flour.txt', header = TRUE)
+(cor_mat <- cor(flour_data))
+```
+<br>
+`protein` and `glutenin` are highly correlated, which makes sense as glutenin is a type of protein. The only other correlation of any significance is `weight` and `protein`, which makes sense as protein is likely more dense than carbohydrates. `weight` and `glutenin` is also decently correlated at 0.26, as well as `moisture` and `protein` at -.29.  
+<br><br>
+*b)*
+```{r}
+flour <- flour_data[, 1:3]
+wheat <- flour_data[, 4:6]
+flour_cor <- cancor(flour, wheat)
+print(flour_cor)
+
+14*flour_cor$xcoef
+20*flour_cor$ycoef
+```
+The first canonical correlation is 0.6705, the second is 0.2814, and the third is 0.0680. 
+For flour, the first canonical variables are roughly -7glutenin + 4protein + 2ash.
+For wheat, the first canonical variables are roughly -4moisture - 3lactic + weight
+
+```{r}
+flour.cc1<-as.matrix(flour)%*%flour_cor$xcoef[,1]
+wheat.cc1<-as.matrix(wheat)%*%flour_cor$ycoef[,1]
+
+cor(flour.cc1, wheat.cc1)
+```
+We see that the first canonical correlation is 0.67. 
+
+```{r}
+cor(flour.cc1, flour)
+```
+All the correlations of the first canonical variable with the data are positive, with protein being the greatest. Even though the coefficient of glutenin is negative, it is positively correlated with the first canonical variable.
+```{r}
+cor(wheat.cc1, wheat)
+```
+Moisture is negatively correlated, whereas weight and lactic are positively correlated with the first canonical variable, although the lactic correlation is very small. The lactic coefficient is negative, but its correlation to the first canonical variable is positive. 
+
+<br><br>
+**2)**
+```{r}
+sales_data <- read.table('/Users/shaylebovitz/R/sales.txt', header = TRUE)
+sales_data <- sales_data[1:50, ]
+perf <- sales_data[, 1:3]
+perf <- as.data.frame(sapply(perf, as.numeric))
+tests <- sales_data[, 4:7]
+sales_cor <- cancor(perf, tests)
+print(sales_cor)
+
+100*sales_cor$xcoef
+100*sales_cor$ycoef
+```
+The first canonical correlation is 0.99, the second is 0.88, and the third is 0.38. This suggests that the two canonical variables are highly correlated.
+For perf, the canonical variables are roughly growth + new.
+For tests, the canonical variables are roughly creat + abs + math
+
+```{r}
+perf_cc1<-as.matrix(perf)%*%sales_cor$xcoef[,1]
+tests_cc1<-as.matrix(tests)%*%sales_cor$ycoef[,1]
+
+cor(perf_cc1, tests_cc1)
+```
+We see that the first canonical correlation is 0.99. 
+```{r}
+cor(perf_cc1, perf)
+```
+All three variables correlate highly with the canoncical variable. These variables are highly correlated with each other, as someone with a lot of sales growth will likely aslo have sales profitability and new account sales. 
+```{r}
+cor(perf)
+cor(tests_cc1, tests)
+```
+All tests are positively correlated with the first canonical variable, with Math being the highest. This reveals taht doing well on the math test likely has the strongest influence on sales performance. Because all four correlations are greater than 0.6, they all are decently important for predicted sales. 

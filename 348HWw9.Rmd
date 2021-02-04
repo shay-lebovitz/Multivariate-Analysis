@@ -1,0 +1,104 @@
+---
+title: "348HWw9"
+author: "Shay Lebovitz"
+date: "11/8/2020"
+output: pdf_document
+---
+
+
+**1)**
+<br>
+*a)*
+```{r}
+brain <- read.table('/Users/shaylebovitz/R/Stat 348/brain.txt', header = TRUE)
+brain <- as.dist(brain)
+brain_mds <- cmdscale(brain, eig = TRUE)
+plot(brain_mds$points, type = 'n', xlab = '', ylab = '')
+text(brain_mds$points, labels = labels(brain))
+```
+
+<br><br>
+*b)*
+```{r}
+brain_mds$GOF
+```
+Both methods for goodness of fit give results greater than 0.70, so I'd say the 2-D MDS model is fairly accurate.
+
+<br>
+*c)*
+```{r}
+brain_mds$eig
+```
+We see that the first two eigengvectors are relatively large, but not that much different than the third. Overall, the MDS analysis is appropriate in this case with regards to the ability to distinguish between categories based on a brain scan.
+
+<br><br>
+**2)**
+<br>
+*a)*
+```{r}
+movies <- read.table('/Users/shaylebovitz/R/Stat 348/movies.txt', header = TRUE)
+movies <- as.dist(movies)
+movies_mds <- cmdscale(movies, eig = TRUE)
+plot(movies_mds$points, type = 'n', xlab = '', ylab = '')
+text(movies_mds$points, labels = labels(movies))
+```
+
+<br>
+*b)*
+```{r}
+movies_mds$GOF
+movies_mds$eig
+```
+We see that the first two eigenvalues are relatively large compared to the others, and the goodness-of-fits for each method are above 0.70, and thus we can say that the 2D MDS model is fairly accurate for the data.
+
+<br>
+*c)*
+Because 'distance' in this case is a measure of the similarity in reviewers' ratings for a given movie (0 for all reviewers ratings are the same, 1 if all different), the axes in this case can be viewed as the variability, or perhaps the contentiousness/polarizability of a movie. 
+
+<br>
+*d)*
+Since she didn't like "Batman Forever", we would want to find the movie with the greatest distance away from it. 
+```{r}
+movies
+```
+That movie would be "Dark Knight Rises" (DKR, distance = 0.857). To find one she wouldn't like, we need to find the most similar one. That would be "Batman" (B, distance = 0.250).
+
+<br><br>
+**3)**
+<br>
+*a)*
+```{r}
+colleges <- read.table('/Users/shaylebovitz/R/Stat 348/Colleges.txt', header = TRUE)
+
+fnc <- function(x) {
+  x/sd(x)
+}
+colleges <- apply(colleges, 2, fnc)
+colleges <- as.data.frame(colleges)
+```
+
+<br>
+*b)*
+```{r}
+col_dist <- dist(colleges)
+```
+
+<br>
+*c)*
+```{r}
+colleges_mds <- cmdscale(col_dist, eig = TRUE)
+plot(colleges_mds$points, type = 'n', xlab = '', ylab = '')
+text(colleges_mds$points, labels = labels(col_dist))
+```
+
+<br>
+*d)*
+```{r}
+colleges_mds$GOF
+colleges_mds$eig
+```
+The goodness of fit by both methods is 0.69, which is right below the usual lowest accepted value of 0.70. I think it would still be fine, as 0.70 is somewhat arbitrarily chosen. We see that the third eigenvalue is relatively similar in magnitude to the second, so perhaps a 3D MDS representation would be more appropriate.
+
+<br>
+*e)*
+It is hard to tell exactly from the distance matrix, but from the plot it looks like the four most similar colleges would be Duke (DU), Penn (UP), Yale (YU), and either Georgetown (GU), U.Chicago (UC), or Stanford (SU). The least similar would be Notre Dame (ND), Dartmouth (DC), Princeton (PU), and Boston College (BC).

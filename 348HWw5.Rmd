@@ -1,0 +1,180 @@
+---
+title: "348HWw5"
+author: "Shay Lebovitz"
+date: "10/12/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**#5**
+*a)*
+```{r}
+paper <- read.table('/Users/shaylebovitz/R/paper.txt', header = TRUE)
+(cor_mat <- cor(paper))
+apply(paper, 2, sd)
+```
+<br>
+`bl` has a high standard deviation, `sf` is medium, and `em` and `bs` have low standard deviations. All of the variables are very highly correlate with each other, the lowest correlation being `bs` and `em` with a correlation of 0.8747, which is still very high.
+
+*b)*
+<br>
+I think that the PC analysis should be based on the correlation matrix because there is a significant spread in the variable standard deviations, and they are also measured in different units.
+
+*c)*
+```{r}
+paper_pca <- prcomp(paper, scale = TRUE)
+paper_pca$rotation
+summary(paper_pca)
+```
+Based on this analysis, just using the first principal componenet explaines 96% of the variance. By the second PC, it is already not 'pulling its weight' in that it explains less than 1/4 of the variance. For these reasons, I would just take the first PC in this case.
+
+*d)*
+```{r}
+paper_sd <- apply(paper, 2, sd)
+10*paper_pca$rotation[,1]/paper_sd
+```
+Here we see most weight is on `em` and `bs`, which have the smallest standard deviations.
+```{r}
+paper_pca_scores <- predict(paper_pca)
+head(paper_pca_scores)
+cor(paper, paper_pca_scores)
+```
+We see that the first principal component is extremely highly correlated with all the varaibles, and the rest of the PCs are essentailly non-correlated with any. I should also note that because the PC1 coefficients are so similar for every variable, it is essentailly an average of the variables. 
+
+<br><br>
+**#6**
+*a)*
+```{r}
+emplmnt <- read.table('/Users/shaylebovitz/R/employment.txt', header = TRUE)
+emplmnt_pca <- prcomp(~AGR + MAN + CON + SER + FIN + SPS + TC, 
+                     data = emplmnt, scale = TRUE)
+emplmnt_pca$rotation
+emplmnt <- emplmnt[,-8]
+```
+<br>
+*b)*
+```{r}
+summary(emplmnt_pca)
+plot(emplmnt_pca, type = 'l')
+```
+<br><br>
+I would choose the first 4 principal components, for a few reasons. Firstly, using the first four accounts for over 90% of the error, which is should be adequate for any analysis. Second, based on the scree plot, we see that the variance significantly plateaus after `PC4`, meaning they are not very useful. Choosing 3 PCs would work well too, as `PC4` doesn't 'pull its weight', as its variance is less than 1/7. 
+
+<br>
+*c)*
+```{r}
+emplmnt_sd <- apply(emplmnt, 2, sd)
+100*emplmnt_pca$rotation[,1]/emplmnt_sd
+```
+Here we see that only `AGR` is positive, the rest are negative.
+```{r}
+emplmnt_pca_scores <- predict(emplmnt_pca)
+head(emplmnt_pca_scores)
+cor(emplmnt, emplmnt_pca_scores)
+```
+We see that `AGR` is highly correlated with `PC1`, and the rest are negatively correlated. `PC2` shows strong correlation with `TC` and strong negative correlation with `FIN`. `PC3` really only shows strong correlation with `CON`. 
+
+
+<br><br>
+**#7**
+*a)*
+```{r}
+pollution <- read.table('/Users/shaylebovitz/R/pollution.txt', header = TRUE)
+(pollution_sd <- apply(pollution, 2, sd))
+cor(pollution)
+```
+<br>
+
+*b)*
+```{r}
+(pollution_pca_cov <- prcomp(pollution, scale = F))
+(pollution_pca_cor <- prcomp(pollution, scale = T))
+```
+`O3` has the highest standard deviation, and in the unscaled `PC1`, carries practically all the weight of the principal componenet. Using the scaled version, we see that the coefficients of `PC1` are much more even across variables, with `O3` now being the smallest. Based on the correlation matrix, `O3` is the least correlated variable. 
+<br>
+
+*c)*
+```{r}
+pollution_pca_scaled <- prcomp(~I(CO/35) + I(NO/25) + I(NO2/5) + I(O3/7.5) + 
+                                 I(HC/25), data = pollution, scale = FALSE)
+pollution_pca_scaled$rotation
+summary(pollution_pca_scaled)
+```
+I would say that the first 2 PCs are needed, as the first one only covers roughly 60% which is probably not adequate. The first two cover >99% of the variance, which is certainly adequate.
+`NO2` and `O3` are the only variables with significant `PC1` and `PC2` coefficients.
+
+<br><br>
+**#8**
+*a)*
+```{r}
+qbs <- read.table('/Users/shaylebovitz/R/QBs.txt', header = TRUE)
+apply(qbs, 2, sd)
+```
+<br>
+Because the standard deviations vary so much, I will perform the analysis based on the correlation matrix
+```{r}
+qbs_pca <- prcomp(~Comp + TD + Int + YPA, data = qbs, scale = TRUE)
+qbs_pca$rotation
+summary(qbs_pca)
+```
+<br>
+
+*b)*
+From the principal components analysis, we see that about 71% of the total variation can be explained by `PC1`. That, along with the fact that `PC2` only explains about 15% of the variation and thus doesn't carry its weight, leads me to believe that just one PC will be adequate for the analysis.
+<br>
+
+*c)* 
+```{r}
+qb_pca_scores <- predict(qbs_pca)
+qb_pca_scores[,1]
+cor(qbs$Rate, qb_pca_scores[,1])
+```
+We see that there is a very strong negative correlation between the first principal component and the quarterback rate. This is surprising as `Rate` has the highest standard deviation of all the variables, so I'm not exactly sure on how to analyze this. <br>
+<br><br>
+**#9)**
+*a)*
+```{r}
+properties <- read.table('/Users/shaylebovitz/R/properties.txt', header = T)
+cor(properties)
+```
+We see high correlation between bathroom number and house size, and between room number and house size. This intuitively makes a lot of sense, bigger houses tend to have more bedrooms and bathrooms. All the other variables are somewhat correlated, most ranging from 0.2 to 0.6, besides the ones mentioned previously. For example, garage size and lot size only have a correlation of 0.204, whereas garage size and room nuber have a correlation of 0.589.
+
+<br>
+*b)*
+```{r}
+properties_reg <- lm(Y ~ BATH + LOT + SIZE + GAR + ROOM + BED + AGE,
+                     data = properties)
+summary(properties_reg)
+```
+We get a fairly high R-squared and adjusted R-squared, showing that the response variables explain the sale price fairly well. However, we see that only `BATH` and `GAR` have statistically significant beta values. `BATH` has a large estimated beta, where as the rest are small, and `BED` and `AGE` having negative betas. This seems right for age (an older house should cost less) but not for bed (more bedrooms should cost more). 
+
+<br>
+*c)*
+```{r}
+properties_reg2 <- lm(Y ~ BATH + GAR, data = properties)
+summary(properties_reg2)
+properties_reg3 <- lm(Y ~ BATH + GAR + AGE, data = properties)
+summary(properties_reg3)
+```
+In both of these regressions, the R-squared and adjusted R-squared values drop, to 0.6001 and 0.562 in `reg2`, and 0.7079 and 0.6641 in `reg3`. We see that `reg3`, which includes `AGE`, does slightly better than `reg2`, showing that age is a valuable predictor. Overall, the drops in R-squared for these models is not too great for the amount of simplification you get from only using 2 or 3 predictors instead of 7. 
+<br>
+
+*d)*
+```{r}
+properties_pca <- prcomp(~LOT + SIZE + GAR + ROOM + BED, data = properties, scale = TRUE)
+properties_pca$rotation
+#interpret PC1
+```
+For the most part, `PC1` is about the average of the five variables, give and take a few percent.
+
+<br>
+*e)*
+```{r}
+PC1 = predict(properties_pca)[,1]
+properties_reg4 <- lm(Y ~ BATH + PC1 + AGE, data = properties)
+summary(properties_reg4)
+```
+Here, we see that all three of the predictor variables have statistically significant betas. `BATH` still appears to be the strongest predictor with a beta of 10.86, while `PC1` has a  smaller beta of 1.38 and `AGE` has a negative beta of -0.16, which is expected since older houses should cost less. The R-squared and adjusted R-squared are relatively high, higher than the other two alternate models `reg2` and `reg3`, though not as high as when every variable was used as a predictor. This shows us that using `PC1` as a predictor does an adequate job for this analysis, as it allows you to reduce the number of predictors but maintain predictive power.

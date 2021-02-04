@@ -1,0 +1,54 @@
+---
+title: "348HWweek4"
+author: "Shay Lebovitz"
+date: "10/6/2020"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(MASS)
+```
+(a)
+```{r}
+set.seed(1)
+sigma = matrix(c(1, 0.25, 0.25, 1), nrow = 2)
+data = mvrnorm(n = 500, mu = c(0,0), Sigma = sigma)
+```
+<br><br>
+(b)
+```{r}
+plot(data[,1], data[,2])
+```
+<br><br>
+(c)
+```{r}
+abline(a = 0, b = 1)
+```
+<br><br>
+(d)
+```{r}
+(mu_y = mean(data[,2]))
+(mu_x = mean(data[,1]))
+(rho = cor(data[,1], data[,2]))
+(sig_x = sd(data[,1]))
+(sig_y = sd(data[,2]))
+```
+Therefore, the regression line is -0.0102 + 0.2086 * 1.0082/1.0497 * (x - 0.0463).
+Simplified, this equals -0.0308 + 0.2658x
+```{r, warning = FALSE}
+abline(a = -0.01948, b = 0.20035, col = 'blue')
+```
+<br><br>
+(e)
+```{r}
+abline(a = -0.04381, b = 1/0.2172, col = 'red')
+```
+Here, our regression line is -0.04603 + 0.2086 * (1.0497 / 1.0082) * (y + 0.0102)
+a = -0.1035, b = 0.2492
+
